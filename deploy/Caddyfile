@@ -53,9 +53,32 @@ https://localhost {
 		reverse_proxy gateway:8085
 	}
 
-	# До появления веб-клиента (#7) корень отвечает 503.
-	handle / {
-		respond 503
+	# Оболочка SPA: только точные клиентские маршруты без параметров.
+	@spa_shell {
+		method GET HEAD
+		path / /login /profile /chats
+	}
+	handle @spa_shell {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Диалог — ровно один сегмент пути, как маршрут /chats/:chatId.
+	@spa_chat {
+		method GET HEAD
+		path_regexp chat ^/chats/[^/]+/?$
+	}
+	handle @spa_chat {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Статические ресурсы сборки: отсутствующий файл остаётся 404.
+	handle /assets/* {
+		root * /srv
+		file_server
 	}
 
 	# Всё остальное закрыто: неизвестные и внутренние RPC не достигают backend.
